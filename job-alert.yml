@@ -1,0 +1,43 @@
+name: internship-alert
+
+on:
+  schedule:
+    # Runs every day at 07:00 UTC. Adjust the cron as you like.
+    - cron: "0 7 * * *"
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write          # needed so the job can commit seen_jobs.json back
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run internship alert
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: python job_alert.py
+
+      - name: Persist seen jobs
+        run: |
+          git config user.name "internship-alert-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add seen_jobs.json
+          git commit -m "Update seen jobs [skip ci]" || echo "No changes"
+          git push || echo "Nothing to push"
